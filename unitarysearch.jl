@@ -104,7 +104,7 @@ end
 
 # Create random matrix frame of rank r
 function genFrame(n::Int,r::Int)::Array{Array{Complex{Float64},2},1}
-  m::Int = 4*n*r-4*r^2+1;
+  m::Int = 4*n*r-4*r^2;
   return [outer((rand(n,r)+rand(n,r)*im)/sqrt(2)) for j=1:m]
 end
 
@@ -426,22 +426,24 @@ end
 
 # Histogram of A2_hat(z) over random z for a fixed n\times r frame
 # Overlay plots
-function plot7(n::Int, r::Int, l1::Int, logp::Bool=false, post::Bool=true)
+function plot7(n::Int, r::Int, l1::Int, logp::Bool=false, post::Bool=true,bsize::Float64=0.01)
+  plotname=logp ? L"\log(1+\hat{A}_2(z))" : L"\hat{A}_2(z)";
   f = genFrame(n,r);
   plots::Array{GenericTrace{Dict{Symbol,Any}},1}=[];
   maxVal::Float64 = 0.;
-  Threads.@threads for k=1:r
-    histdata::Array{Float64, 1} = [A2_hat(rand(n,k)+im*rand(n,k),f,n) for j=1:l1];
+  for k=1:r
+    histdata::Array{Float64, 1} = [A2_hat(rand(n,k)+im*rand(n,k),f[1:(4*n*k-4*k^2)],n) for j=1:l1];
     if logp
       histdata = log.(1 .+ histdata);
     end
-    push!(plots,Plotly.histogram(x=histdata,opacity=0.6, xbins_size=0.01, name=L"\mbox{rank}(z)=%$(k)"));
+    push!(plots,Plotly.histogram(x=histdata,opacity=0.6, xbins_size=bsize, name=L"\mbox{rank}(z)=%$(k)"));
     newMax::Float64 = max(histdata...);
     if newMax > maxVal
       maxVal = newMax;
     end
   end
-  p = Plotly.plot(plots, Layout(barmode="overlay", title=L"\hat{A}_2(z)\mbox{ for }n=%$(n)\mbox{, }r=%$(r)\mbox{, and }l=%$(l1)\mbox{ random z}", xaxis_title=L"\hat{A}_2(z)",yaxis_title=L"n",xaxis_range=[0,maxVal]));
+
+  p = Plotly.plot(plots, Layout(barmode="overlay", title=replace(plotname*L"\mbox{ for }n=%$(n)\mbox{, }r=%$(r)\mbox{, and }l=%$(l1)\mbox{ random z}","\$\$"=>""), xaxis_title=plotname,yaxis_title=L"n",xaxis_range=[0,maxVal]));
   if post
     Plotly.post(p,fileopt="overwrite",filename="A2_hat(z) with n=$(n) and r=$(r)",world_readable=true)
   else
@@ -452,14 +454,14 @@ end
 # Histogram of A2_hat(z) over random z for a fixed n\times r frame
 # Grid plots
 function plot7alt(n::Int, r::Int, l1::Int, logp::Bool=false, post::Bool=true)
-  if r%2 ==1
+  if r%2 == 1
     println("r must be even for this type of plot")
     return
   end
   f = genFrame(n,r);
   global plots = [];
   for k=1:r
-    histdata::Array{Float64,1} =[A2_hat(rand(n,k)+im*rand(n,k),f,n) for j=1:l1];
+    histdata::Array{Float64,1} =[A2_hat(rand(n,k)+im*rand(n,k),f[1:(4*n*k-4*k^2)],n) for j=1:l1];
     if logp
       histdata = log.(1 .+ histdata);
     end
@@ -494,24 +496,25 @@ end
 
 # Histogram of a2_hat(z) over random z for a fixed n\times r frame
 # Overlay plots
-function plot8(n::Int, r::Int, l1::Int, logp::Bool=false, post::Bool=true)
+function plot8(n::Int, r::Int, l1::Int, logp::Bool=false, post::Bool=true,bsize::Float64=0.01)
+  plotname=logp ? L"\log(1+\hat{a}_2(z))" : L"\hat{a}_2(z)";
   f = genFrame(n,r);
   plots::Array{GenericTrace{Dict{Symbol,Any}},1}=[];
   maxVal::Float64 = 0.;
-  Threads.@threads for k=1:r
-    histdata::Array{Float64, 1} = [lambdaQ(f, n, k) for j=1:l1];
+  for k=1:r
+    histdata::Array{Float64, 1} = [a2_hat(rand(n,k)+im*rand(n,k),f[1:(4*n*k-4*k^2)],n) for j=1:l1];
     if logp
       histdata = log.(1 .+ histdata);
     end
-    push!(plots,Plotly.histogram(x=histdata,opacity=0.6, xbins_size=0.01, name=L"\mbox{rank}(z)=%$(k)"));
+    push!(plots,Plotly.histogram(x=histdata,opacity=0.6, xbins_size=bsize, name=L"\mbox{rank}(z)=%$(k)"));
     newMax::Float64 = max(histdata...);
     if newMax > maxVal
       maxVal = newMax;
     end
   end
-  p = Plotly.plot(plots, Layout(barmode="overlay", title=L"\hat{A}_2(z)\mbox{ for }n=%$(n)\mbox{, }r=%$(r)\mbox{, and }l=%$(l1)\mbox{ random z}", xaxis_title=L"\hat{A}_2(z)",yaxis_title=L"n",xaxis_range=[0,maxVal]))
+  p = Plotly.plot(plots, Layout(barmode="overlay", title=replace(plotname*L"\mbox{ for }n=%$(n)\mbox{, }r=%$(r)\mbox{, and }l=%$(l1)\mbox{ random z}","\$\$"=>""), xaxis_title=plotname,yaxis_title=L"n",xaxis_range=[0,maxVal]))
   if post
-  Plotly.post(p,fileopt="overwrite",filename="A2_hat(z) with n=$(n) and r=$(r)",world_readable=true)
+  Plotly.post(p,fileopt="overwrite",filename="littlea2_hat(z) with n=$(n) and r=$(r)",world_readable=true)
   else
     p
   end
@@ -527,7 +530,7 @@ function plot8alt(n::Int, r::Int, l1::Int, logp::Bool=false, post::Bool=true)
   f = genFrame(n,r);
   global plots = [];
   for k=1:r
-    histdata::Array{Float64,1} =[a2_hat(rand(n,k)+im*rand(n,k),f,n) for j=1:l1];
+    histdata::Array{Float64,1} =[a2_hat(rand(n,k)+im*rand(n,k),f[1:(4*n*k-4*k^2)],n) for j=1:l1];
     if logp
       histdata = log.(1 .+ histdata);
     end
@@ -562,22 +565,23 @@ end
 
 # Histogram of a(z) over random z for a fixed n\times r frame
 # Overlay plots
-function plot9(n::Int, r::Int, l1::Int, logp::Bool=false, post::Bool=true)
+function plot9(n::Int, r::Int, l1::Int, logp::Bool=false, post::Bool=true,bsize::Float64=0.01)
+  plotname=logp ? L"\log(1+a(z))" : L"a(z)";
   f = genFrame(n,r);
   plots::Array{GenericTrace{Dict{Symbol,Any}},1}=[];
   maxVal::Float64 = 0.;
-  Threads.@threads for k=1:r
-    histdata::Array{Float64, 1} = [lambdaQ(f, n, k) for j=1:l1];
+  for k=1:r
+    histdata::Array{Float64, 1} = [lambdaQ(f[1:(4*n*k-4*k^2)], n, k) for j=1:l1];
     if logp
       histdata = log.(1 .+ histdata);
     end
-    push!(plots,Plotly.histogram(x=histdata,opacity=0.6, xbins_size=0.01, name=L"\mbox{rank}(z)=%$(k)"));
+    push!(plots,Plotly.histogram(x=histdata,opacity=0.6, xbins_size=bsize, name=L"\mbox{rank}(z)=%$(k)"));
     newMax::Float64 = max(histdata...);
     if newMax > maxVal
       maxVal = newMax;
     end
   end
-  p = Plotly.plot(plots, Layout(barmode="overlay", title=L"a(z)\mbox{ for }n=%$(n)\mbox{, }r=%$(r)\mbox{, and }l=%$(l1)\mbox{ random z}", xaxis_title=L"a(z)",yaxis_title=L"n",xaxis_range=[0,maxVal]))
+  p = Plotly.plot(plots, Layout(barmode="overlay", title=replace(plotname*L"\mbox{ for }n=%$(n)\mbox{, }r=%$(r)\mbox{, and }l=%$(l1)\mbox{ random z}","\$\$"=>""), xaxis_title=plotname,yaxis_title=L"n",xaxis_range=[0,maxVal]))
   if post
   Plotly.post(p,fileopt="overwrite",filename="a(z) with n=$(n) and r=$(r)",world_readable=true)
   else
@@ -595,7 +599,7 @@ function plot9alt(n::Int, r::Int, l1::Int, logp::Bool=false, post::Bool=true)
   f = genFrame(n,r);
   global plots = [];
   for k=1:r
-    histdata::Array{Float64,1} =[lambdaQ(f, n, k) for j=1:l1];
+    histdata::Array{Float64,1} =[lambdaQ(f[1:(4*n*k-4*k^2)], n, k) for j=1:l1];
     if logp
       histdata = log.(1 .+ histdata);
     end
